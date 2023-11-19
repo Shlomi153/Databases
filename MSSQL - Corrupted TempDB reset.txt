@@ -1,0 +1,32 @@
+--Created by Shlomi Kiko 
+--Topic: high level idea of how to resolve corrupted TempDB files
+--Linkedin: https://www.linkedin.com/in/shlomikiko/
+
+If TempDB files are corrupted, follow the following steps:
+
+1) Run sqlserv exe in the bin file of the SQLServer folder.
+
+2) Open CMD as admin, run:
+cd C:\Program Files\Microsoft SQL Server\MSSQL15.MSSQLSERVER\MSSQL\Binn
+
+sqlservr -c -f -T3608 -T4022 -s MSSQLSERVER -mSQLCMD
+
+Details:
+-c parameter quickens the SQL Server startup time
+-f parameter loads SQL Server in minimalistic mode
+Trace flag 3608 prevents SQL from loading anything save the Master Database, TempDB is created only if something really requires it
+Trace flag 4022 disabled any automatic Stored Procedures
+-s parameter is something we use to specify the instance we want to connect to
+-mSQLCMD so that we can connect to the instance with SQLCMD
+
+All of this so that we can reset TempDB via SQLCMD.
+Note: for duration of the whole operation, CMD should stay open.
+
+3) Open SQLCMD and run:
+exec master..sp_resetstatus tempdb
+GO
+
+4) When this step completes, close SQLCMD and exit the original CMD windows using Ctrl + C
+
+5) Open SQL Server Configuration Manager, restart the instance.
+New Tempdb files will be created in the default location and the instance should start successfully.

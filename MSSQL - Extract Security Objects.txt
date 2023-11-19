@@ -1,0 +1,61 @@
+--Created by Shlomi Kiko
+--Topic: Review all security objects in the databases
+--Linkedin: https://www.linkedin.com/in/shlomikiko/
+
+Extract Security Objects From Databases:
+
+Database Users:
+SELECT 'CREATE USER [' + p.name + '] FOR LOGIN [' + p.name + ']' 
+FROM sys.[database_principals] p
+LEFT JOIN sys.syslogins l
+ON(l.name = p.name)
+WHERE p.type IN ('S', 'G', 'U') AND p.name NOT IN ('sa', 'dbo', 'sys', 'INFORMATION_SCHEMA', 'guest')
+
+Database Fixed Roles:
+SELECT 'EXEC sp_addrolemember ''' + a.name + ''', ''' + b.name + ''''
+FROM [sys].[database_principals] a, [sys].[database_principals] b, [sys].[database_role_members] c
+WHERE a.principal_id = c.role_principal_id AND c.member_principal_id = b.principal_id AND b.name NOT IN ('sa', 'dbo', 'sys', 'INFORMATION_SCHEMA', 'guest')
+
+Custom Database Roles:
+SET NOCOUNT OFF
+SELECT 'USE [' + db_name() + ']'
+SELECT 'GO'
+SELECT 'CREATE ROLE [' + a.name + '] AUTHORIZATION [' + b.name + ']'
+FROM sys.[database_principals] a, sys.[database_principals] b
+WHERE a.owning_principal_id = b.principal_id AND a.type = 'R' AND a.is_fixed_role = 0 AND a.name <> 'PUBLIC'
+
+Database Permissions:
+SELECT state_desc + ' ' + permission_name + 'to [' + sys.database_principals.name + ']' COLLATE LATIN1_General_CI_AS
+FROM sys.database_permissions
+JOIN sys.database_principals ON sys.database_permissions.grantee_principal_id = sys.database_principals.principal_id
+WHERE class_desc = 'DATABASE' and permission_name <> 'CONNECT'
+
+Fixed Database Roles:
+SELECT 'EXEC sp_addrolemember ''' + a.name + ''', ''' + b.name + ''''
+FROM [sys].[database_principals] a, [sys].[database_principals] b, [sys].[database_role_members] c
+WHERE a.principal_id = c.role_principal_id AND c.member_principal_id = b.principal_id AND b.name NOT IN ('sa', 'dbo', 'sys', 'INFORMATION_SCHEMA', 'guest')
+
+Custom Database Roles:
+SET NOCOUNT OFF
+SELECT 'USE [' + db_name() + ']'
+SELECT 'GO'
+SELECT 'CREATE ROLE [' + a.name + '] AUTHORIZATION [' + b.name + ']'
+FROM sys.[database_principals] a, sys.[database_principals] b
+WHERE a.owning_principal_id = b.principal_id AND a.type = 'R' AND a.is_fixed_role = 0 AND a.name <> 'PUBLIC'
+
+Database Permissions:
+SELECT state_desc + ' ' + permissions_name + ' to [' + sys.database_principals.name + '] COLLATE LATIN1_General_CI_AS
+FROM sys.database_permissions
+JOIN sys.database_principals ON (sys.database_permissions.grantee_principal_id = sys.database_principals.principal_id)
+WHERE class_desc = 'DATABASE' AND permissions_name <> 'CONNECT'
+
+Database Object Level Permissions:
+SELECT state_desc + ' ' + permission_name + ' ON [' + sys.schemas.name + ']'.[' + sys.objects.name + '] to [' + sys.database_principals.name + '] COLLATE LATIN1_General_CI_AS
+FROM sys.database_permissions
+JOIN sys.objects
+ON sys.database_permissions.major_id = sys.objects.object_id
+JOIN sys.schemas
+ON sys.onjects.schema_id = sys.schema.schema_id
+JOIN sys.database_principals
+ON sys.database_permissions.grantee_principal_id = sys.database_principals.principal_id
+WHERE sys.database_principals.name <> 'public'
